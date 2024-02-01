@@ -1,9 +1,9 @@
 
 # read from package data
-df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "benthictraits"))
+df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "traitfinder"))
 
 # read from package data
-df_traits <- readr::read_rds(system.file("extdata", "beauchard_2023.rds", package = "benthictraits"))
+df_traits <- readr::read_rds(system.file("extdata", "beauchard_2023.rds", package = "traitfinder"))
 
 
 find_feeding <- function(x){
