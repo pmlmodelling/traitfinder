@@ -1,16 +1,16 @@
 
-# read from package data
-df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "traitfinder"))
-
-# read from package data
-df_traits <- readr::read_rds(system.file("extdata", "beauchard_2023.rds", package = "traitfinder"))
+library(tidyverse)
 
 
-find_feeding <- function(x){
+
+find_c_wm_ratio <- function(x){
+    df_traits <- readr::read_rds(system.file("extdata", "bray_traits_c_wm_ratio.rds", package = "traitfinder"))
+  
+  # return("This is it")
   ###
   # function to extract the feeding trait from the WORMS database
   # x is the species name
-  # returns the mean suspension feeding trait
+  # returns the mean c_wm_ratio feeding trait
   # if no match is found returns NA
   # todo: include rank in the output
   
@@ -36,7 +36,7 @@ find_feeding <- function(x){
       # get rid of \ in x
       x = stringr::str_trim(x)
       
-      bad = TRUE
+        bad = TRUE
       tryCatch({
           df_worms <- worrms::wm_records_name(name = x) 
           df_worms <- dplyr::filter(df_worms, is.na(scientificname) == FALSE)
@@ -47,20 +47,20 @@ find_feeding <- function(x){
       })
       if (bad)
         return (
-          dplyr::tibble(Suspension = -9999,
+          dplyr::tibble(c_wm_ratio = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS")
         )
       
       df_worms <- dplyr::slice(df_worms, 1)
       # check if the status was deleted
       if (df_worms$status[1] == "deleted")
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(c_wm_ratio = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       rank_name <- df_worms$rank
       
       if (rank_name == "Kingdom")
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(c_wm_ratio = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       candidates <- dplyr::select(df_worms,phylum, class, order, family, genus)
@@ -99,47 +99,39 @@ find_feeding <- function(x){
       if ("Subclass" %in% names(df_worms))
         df_worms <- dplyr::rename(df_worms, Order = Subclass) 
       
+      # make all column names lower case
+      df_worms <- dplyr::rename_all(df_worms, tolower)
+      
       suppressMessages(df_beau <- df_worms %>% 
         dplyr::select_if(~ !any(is.na(.))) %>% 
         dplyr::inner_join(df_traits) )
       if (nrow(df_beau) > 0) {
         return(
           df_beau %>% 
-            dplyr::filter(complete.cases(Suspension)) %>%
-            dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
+            dplyr::filter(is.na(c_wm_ratio) == FALSE) %>%
+            dplyr::summarize(c_wm_ratio = mean(c_wm_ratio, na.rm = TRUE), n_taxon = dplyr::n()) %>%
               dplyr::mutate(rank = rank_name) %>% 
               dplyr::mutate(name_matched = valid_name) %>% 
-              dplyr::mutate(source = "Beauchard et al. 2023" )
+              dplyr::mutate(source = "Bray" )
         )
-      }
+      # }
       
-      # make df_worms column names lower case
-      names(df_worms) <- tolower(names(df_worms))
-      if ("species" %in% names(df_worms) == FALSE){
-      suppressMessages(df_trait <- df_cefas %>% 
-        dplyr::inner_join(df_worms) )
-      if(nrow(df_trait) > 0){
-        
-        trait <- df_trait %>% 
-          dplyr::ungroup() %>% 
-          # pull(Suspension) %>% 
-          dplyr::filter(complete.cases(Suspension)) %>%
-            dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
-              dplyr::mutate(rank = rank_name) %>% 
-              dplyr::mutate(name_matched = valid_name) %>% 
-              dplyr::mutate(source = "Cefas" )
-      return(trait)
-      }
       
       }
       
       if (i > length(candidates))
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(c_wm_ratio = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       }
       }
 }
+
+# find_c_wm_ratio("Amphiura")
+
+
+
+
 
 
 
