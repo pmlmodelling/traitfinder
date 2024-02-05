@@ -1,12 +1,11 @@
 
-# read from package data
-df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "traitfinder"))
-
-# read from package data
-df_traits <- readr::read_rds(system.file("extdata", "beauchard_2023.rds", package = "traitfinder"))
-
 
 find_feeding <- function(x){
+  # read from package data
+  df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "traitfinder"))
+  
+  # read from package data
+  df_traits <- readr::read_rds(system.file("extdata", "beauchard_2023.rds", package = "traitfinder"))
   ###
   # function to extract the feeding trait from the WORMS database
   # x is the species name
@@ -47,68 +46,80 @@ find_feeding <- function(x){
       })
       if (bad)
         return (
-          dplyr::tibble(Suspension = -9999,
+          dplyr::tibble(suspension = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS")
         )
       
       df_worms <- dplyr::slice(df_worms, 1)
       # check if the status was deleted
       if (df_worms$status[1] == "deleted")
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(suspension = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       rank_name <- df_worms$rank
       
       if (rank_name == "Kingdom")
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(suspension = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
-      candidates <- dplyr::select(df_worms,phylum, class, order, family, genus)
+      candidates <- dplyr::select(df_worms, genus, family, order, class, phylum)
       candidates <- tidyr::gather(candidates, key, value, phylum:genus) 
-      candidates <-  dplyr::slice(candidates, 5:1) 
-      candidates <- tidyr::drop_na(candidates) 
-      candidates <- candidates$value
+      candidates <- dplyr::filter(candidates, !stringr::str_detect(value, "unassigned"))
+      candidates <- candidates %>% 
+        tidyr::spread(key, value)
+      candidates <- dplyr::select(candidates, dplyr::contains("genus"), dplyr::contains("family"), dplyr::contains("order"), dplyr::contains("class"), dplyr::contains("phylum"))
       
       df_worms <- dplyr::select(df_worms, valid_name)
       
       names(df_worms) <- rank_name
       
       i <- 0
+      
       while (TRUE){
       
       
-      if (i > 0){
-        x <- candidates[i]
+      if (i > 1){
+        df_worms <- candidates %>% 
+          dplyr::select(i-1)
         
       }
-      i <- i + 1
       
-      df_worms <- worrms::wm_records_name(name = x)
-      df_worms <- dplyr::filter(df_worms, is.na(scientificname) == FALSE) 
-      df_worms <- dplyr::slice(df_worms, 1)
+      bad <- FALSE
       
-      rank_name <- df_worms$rank
+      if(i > 1){
+        rank_name <- df_worms %>% 
+          dplyr::select(1) %>%
+          names()
+          
+        
+      }
       
-      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom")) == FALSE){
-      df_worms <- dplyr::select(df_worms, valid_name)
-    
-      valid_name <- df_worms$valid_name
+      bad <- FALSE
       
-      names(df_worms) <- rank_name
-      
-      if ("Subclass" %in% names(df_worms))
-        df_worms <- dplyr::rename(df_worms, Order = Subclass) 
+      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass")))
+        bad <- TRUE
+        
+      if (bad == FALSE){
+      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass")) == FALSE){
       
       suppressMessages(df_beau <- df_worms %>% 
         dplyr::select_if(~ !any(is.na(.))) %>% 
         dplyr::inner_join(df_traits) )
+    
+      
+      
       if (nrow(df_beau) > 0) {
+        out_name <- df_worms %>% 
+          dplyr::select(1) %>% 
+          dplyr::slice(1) %>% 
+          dplyr::pull() 
+        
         return(
           df_beau %>% 
             dplyr::filter(complete.cases(Suspension)) %>%
             dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
               dplyr::mutate(rank = rank_name) %>% 
-              dplyr::mutate(name_matched = valid_name) %>% 
+              dplyr::mutate(name_matched = out_name) %>%
               dplyr::mutate(source = "Beauchard et al. 2023" )
         )
       }
@@ -120,27 +131,34 @@ find_feeding <- function(x){
         dplyr::inner_join(df_worms) )
       if(nrow(df_trait) > 0){
         
+        out_name <- df_worms %>% 
+          dplyr::select(1) %>% 
+          dplyr::slice(1) %>% 
+          dplyr::pull()
+        
         trait <- df_trait %>% 
           dplyr::ungroup() %>% 
           # pull(Suspension) %>% 
           dplyr::filter(complete.cases(Suspension)) %>%
             dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
               dplyr::mutate(rank = rank_name) %>% 
-              dplyr::mutate(name_matched = valid_name) %>% 
+              dplyr::mutate(name_matched = out_name) %>%
               dplyr::mutate(source = "Cefas" )
       return(trait)
       }
+      # }
       
+      # }
+      
+      # }
       }
+      }
+      }
+      i <- i + 1
       
       if (i > length(candidates))
-          return(dplyr::tibble(Suspension = -9999,
+          return(dplyr::tibble(suspension = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       }
-      }
 }
-
-
-
-
