@@ -1,6 +1,10 @@
 
 
 find_feeding <- function(x){
+  # some manual stuff
+  
+  if(x == "Aplacophora")
+    return(tibble(suspension = 1, n_taxon = 1, rank = "class", name_matched = "Aplacophora", source = "Manual"))
   # read from package data
   df_cefas <- readr::read_rds(system.file("extdata", "cefas_feeding.rds", package = "traitfinder"))
   
@@ -34,6 +38,8 @@ find_feeding <- function(x){
       
       # get rid of \ in x
       x = stringr::str_trim(x)
+      
+      x = traitfinder::name_match(x)
       
       bad = TRUE
       tryCatch({
@@ -77,26 +83,24 @@ find_feeding <- function(x){
       
       while (TRUE){
       
-      
-      if (i > 1){
+      if (i > 0){
         df_worms <- candidates %>% 
-          dplyr::select(i-1)
+          dplyr::select(i)
         
       }
       
       bad <- FALSE
       
-      if(i > 1){
+      if(i > 0){
         rank_name <- df_worms %>% 
           dplyr::select(1) %>%
           names()
-          
-        
       }
+      
       
       bad <- FALSE
       
-      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass")))
+      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass", "Subphylum")))
         bad <- TRUE
         
       if (bad == FALSE){
@@ -119,6 +123,7 @@ find_feeding <- function(x){
             dplyr::filter(complete.cases(Suspension)) %>%
             dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
               dplyr::mutate(rank = rank_name) %>% 
+              dplyr::mutate(rank = stringr::str_to_lower(rank)) %>% 
               dplyr::mutate(name_matched = out_name) %>%
               dplyr::mutate(source = "Beauchard et al. 2023" )
         )
@@ -142,8 +147,9 @@ find_feeding <- function(x){
           dplyr::filter(complete.cases(Suspension)) %>%
             dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
               dplyr::mutate(rank = rank_name) %>% 
+              dplyr::mutate(rank = stringr::str_to_lower(rank)) %>% 
               dplyr::mutate(name_matched = out_name) %>%
-              dplyr::mutate(source = "Cefas" )
+              dplyr::mutate(source = "Cefas" ) 
       return(trait)
       }
       # }
