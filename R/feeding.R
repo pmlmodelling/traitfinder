@@ -41,6 +41,20 @@ find_feeding <- function(x){
       
       x = traitfinder::name_match(x)
       
+      # start of by seeing if we can find it based on the species info in beauchard
+      df_try <- df_traits %>% 
+        dplyr::filter(Species == x) 
+      if(nrow(df_try) > 0){
+        return(
+          df_try %>% 
+            dplyr::filter(complete.cases(Suspension)) %>%
+            dplyr::summarize(suspension = mean(Suspension, na.rm = TRUE), n_taxon = dplyr::n()) %>%
+              dplyr::mutate(rank = "species") %>% 
+              dplyr::mutate(name_matched = x) %>%
+              dplyr::mutate(source = "Beauchard et al. 2023" )
+        )
+      }
+      
       bad = TRUE
       tryCatch({
           df_worms <- worrms::wm_records_name(name = x) 
@@ -57,6 +71,12 @@ find_feeding <- function(x){
         )
       
       df_worms <- dplyr::slice(df_worms, 1)
+      # we now need to check the worms name is not radically different....
+      if(stringdist::stringsim(x, df_worms$scientificname[1]) < 0.7)
+        return(dplyr::tibble(suspension = -9999,
+                 n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
+      
+      
       # check if the status was deleted
       if (df_worms$status[1] == "deleted")
           return(dplyr::tibble(suspension = -9999,
@@ -100,11 +120,15 @@ find_feeding <- function(x){
       
       bad <- FALSE
       
-      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass", "Subphylum")))
+      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass", "Subphylum",  "Infraorder")))
         bad <- TRUE
         
       if (bad == FALSE){
-      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass")) == FALSE){
+        x_value <- df_worms %>% 
+          dplyr::select(1) %>% 
+          dplyr::slice(1) %>% 
+          dplyr::pull()
+      if ((rank_name %in% c("Suborder", "Parvphylum", "Subfamily", "Subspecies", "Kingdom", "Subclass")) == FALSE & complete.cases(x_value)){
       
       suppressMessages(df_beau <- df_worms %>% 
         dplyr::select_if(~ !any(is.na(.))) %>% 
