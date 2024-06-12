@@ -17,7 +17,6 @@ find_feeding <- function(x){
   # if no match is found returns NA
   # todo: include rank in the output
   
-  
       x = gsub("\\(.*\\)", "", x)
       x = stringr::str_remove_all(x, "[^[:alpha:][:space:]]")
       x = stringr::str_split(x, "\\[")[[1]][1]
@@ -72,11 +71,10 @@ find_feeding <- function(x){
       
       df_worms <- dplyr::slice(df_worms, 1)
       # we now need to check the worms name is not radically different....
-      if(stringdist::stringsim(x, df_worms$scientificname[1]) < 0.7)
+      if(stringdist::stringsim(stringr::str_to_lower(x), stringr::str_to_lower(df_worms$scientificname[1])) < 0.7)
         return(dplyr::tibble(suspension = -9999,
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
-      
-      
+    
       # check if the status was deleted
       if (df_worms$status[1] == "deleted")
           return(dplyr::tibble(suspension = -9999,
