@@ -73,6 +73,9 @@ find_trait_explorer <- function(x, trait = ""){
                  n_taxon = NA, rank = NA, name_matched = NA, source = "Unable to find any matches in WORMS"))
       
       rank_name <- tolower(df_worms$rank)
+      if (rank_name == "phylum (division)")
+        rank_name = "phylum"
+      
       
       if (rank_name == "Kingdom")
           return(dplyr::tibble(trait = -9999,
@@ -96,9 +99,13 @@ find_trait_explorer <- function(x, trait = ""){
         if (i == 1){
       df_worms <- dplyr::slice(df_worms, 1)
       
-       if ((rank_name %in% c("suborder", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily")) == TRUE)
+       if ((rank_name %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily", "Infraorder")) == TRUE)
          bad <- TRUE
-       if ((rank_name %in% c("suborder", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily")) == FALSE){
+       x_value <- df_worms %>% 
+         dplyr::select(1) %>% 
+         dplyr::slice(1) %>% 
+         dplyr::pull()
+       if ((rank_name %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily", "Infraorder")) == FALSE  & complete.cases(x_value) ){
       
       if ("subclass" %in% names(df_worms))
         df_worms <- dplyr::rename(df_worms, Order = subclass) 
@@ -113,7 +120,7 @@ find_trait_explorer <- function(x, trait = ""){
         rank_name <- names(df_worms)[1]
       }
       
-      if (bad == FALSE){
+      if (bad == FALSE & complete.cases(x_value)){
       suppressMessages(df_beau <- df_worms %>% 
         dplyr::select_if(~ !any(is.na(.))) %>% 
         dplyr::inner_join(df_traits) )
