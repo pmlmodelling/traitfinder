@@ -99,13 +99,13 @@ find_trait_explorer <- function(x, trait = ""){
         if (i == 1){
       df_worms <- dplyr::slice(df_worms, 1)
       
-       if ((rank_name %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily", "Infraorder")) == TRUE)
+       if ((stringr::str_to_lower(rank_name) %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily",  "infraorder")) == TRUE)
          bad <- TRUE
        x_value <- df_worms %>% 
          dplyr::select(1) %>% 
          dplyr::slice(1) %>% 
          dplyr::pull()
-       if ((rank_name %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily", "Infraorder")) == FALSE  & complete.cases(x_value) ){
+       if ((stringr::str_to_lower(rank_name) %in% c("suborder", "subphylum", "parvphylum", "subfamily", "subspecies", "kingdom", "superfamily", "infraorder")) == FALSE  & complete.cases(x_value) ){
       
       if ("subclass" %in% names(df_worms))
         df_worms <- dplyr::rename(df_worms, Order = subclass) 
