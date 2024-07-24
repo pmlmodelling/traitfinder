@@ -7,17 +7,26 @@
 
 find_trait_explorer <- function(x, trait = ""){
   # some error handling
-  if (trait == "")
-    return("Please specify a trait")
+  
+  df_traits <- readr::read_rds(system.file("extdata", "bray_ratios.rds", package = "traitfinder"))
+  
+  traits <- df_traits %>% 
+    dplyr::select(-class, -phylum, -order, -family, -genus, -species) %>% 
+    names()
+  
+  # throw error if trait is not in traits
+  # This should list the traits available, using traits
+  # traits split out, i.e trait1, trait2,
+  trait_list <- stringr::str_c(traits, collapse = ", ")
+  if (!(trait %in% traits))
+    return(stringr::str_glue("Trait {trait} not found. Available traits are: {trait_list}"))
   
   # check trait is valid
-  if (trait %in% c("dm_wm_ratio", "c_wm_ratio") == FALSE)
-    return("Please specify a valid trait")
   
-  if (trait == "dm_wm_ratio")
-    df_traits <- readr::read_rds(system.file("extdata", "bray_traits_dm_wm_ratio.rds", package = "traitfinder"))
-  if (trait == "c_wm_ratio")
-    df_traits <- readr::read_rds(system.file("extdata", "bray_traits_c_wm_ratio.rds", package = "traitfinder"))
+  df_traits <- df_traits %>% 
+    # select trait
+    dplyr::select(dplyr::one_of(trait), class, phylum, order, family, genus, species) %>% 
+    tidyr::drop_na()
   
   names(df_traits)[1] <- "trait" 
 
@@ -154,21 +163,10 @@ find_trait_explorer <- function(x, trait = ""){
       }
 }
 
-find_dm_wm_ratio <- function(x) {
-  df <- find_trait_explorer(x, trait = "dm_wm_ratio")
-  names(df)[1] <- "dm_wm_ratio"
+find_ratio <- function(x, ratio = "") {
+  
+  df <- find_trait_explorer(x, trait = ratio)
+  names(df)[1] <- ratio 
   
   return(df)
 }
-
-find_c_wm_ratio <- function(x) {
-  df <- find_trait_explorer(x, trait = "c_wm_ratio")
-  names(df)[1] <- "c_wm_ratio"
-  return(df)
-}
-
-
-
-
-
-
